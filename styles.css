@@ -1,0 +1,15 @@
+body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
+
+input[type="number"]::-webkit-inner-spin-button,  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+input[type="number"] { -moz-appearance: textfield; }
+
+.tab-button.active {
+  background-color: #f59e0b;
+  color: #1e293b;
+  border-color: #f59e0b;
+}
+
+textarea {
+  min-height: 80px;
+}
