@@ -48,24 +48,24 @@
                     <!-- Status -->
                     <div class="bg-slate-800 p-6 rounded-xl shadow-lg">
                         <h2 class="text-2xl font-bold mb-4 border-b-2 border-slate-700 pb-2 text-amber-300">Status</h2>
-                        <div class="grid grid-cols-2 gap-4">
-                             <div>
-                                <label for="hp-current" class="block font-semibold mb-1">HP Atual</label>
-                                <input type="number" id="hp-current" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block font-semibold mb-1 text-center">Pontos de Vida (HP)</label>
+                                <div class="flex items-center justify-center gap-2">
+                                    <input type="number" id="hp-current" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
+                                    <span class="text-lg font-bold text-slate-400">/</span>
+                                    <input type="number" id="hp-max" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
+                                </div>
                             </div>
                             <div>
-                                <label for="hp-max" class="block font-semibold mb-1">HP Máx</label>
-                                <input type="number" id="hp-max" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
+                                <label class="block font-semibold mb-1 text-center">Pontos de Heroísmo (PH)</label>
+                                <div class="flex items-center justify-center gap-2">
+                                    <input type="number" id="ph-current" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
+                                    <span class="text-lg font-bold text-slate-400">/</span>
+                                    <input type="number" id="ph-max" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
+                                </div>
                             </div>
-                            <div>
-                                <label for="ph-current" class="block font-semibold mb-1">PH Atual</label>
-                                <input type="number" id="ph-current" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
-                            </div>
-                            <div>
-                                <label for="ph-max" class="block font-semibold mb-1">PH Máx</label>
-                                <input type="number" id="ph-max" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
-                            </div>
-                            <div class="col-span-2">
+                             <div class="col-span-2 pt-2">
                                 <label for="pp-total" class="block font-semibold mb-1 text-center">Pontos de Poder (PP)</label>
                                 <input type="number" id="pp-total" class="bg-slate-700 text-center text-3xl font-bold w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
                             </div>
@@ -117,9 +117,8 @@
                     <div class="bg-slate-800 p-6 rounded-xl shadow-lg">
                         <div class="flex justify-between items-center mb-4 border-b-2 border-slate-700 pb-2">
                             <h2 class="text-2xl font-bold text-amber-300">Perícias</h2>
-                            <button onclick="addItem('skills')" class="bg-green-600 hover:bg-green-500 text-white font-bold text-sm px-3 py-1 rounded-full transition-colors">+ Adicionar</button>
                         </div>
-                        <div id="skills-container" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2"></div>
+                        <div id="skills-container" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3"></div>
                     </div>
 
                     <!-- Poderes -->
@@ -144,15 +143,57 @@
         activeIndex: 0,
     };
 
+    // --- DADOS CONSTANTES ---
+    const SKILLS_LIST = [
+        { name: "Acrobacia", attr: "des", description: "Equilíbrio, proezas acrobáticas e quedas." },
+        { name: "Adestramento", attr: "car", description: "Comandar, treinar e cuidar de animais." },
+        { name: "Atletismo", attr: "for", description: "Correr, escalar, nadar e saltar." },
+        { name: "Atuação", attr: "car", description: "Entreter com música, dança, teatro, etc." },
+        { name: "Cavalgar", attr: "des", description: "Conduzir montarias e veículos." },
+        { name: "Conhecimento", attr: "int", description: "Informações sobre áreas específicas (história, geografia, etc.)." },
+        { name: "Cura", attr: "sab", description: "Tratar ferimentos, doenças e venenos." },
+        { name: "Diplomacia", attr: "car", description: "Influenciar socialmente, negociar e obter informações." },
+        { name: "Enganação", attr: "car", description: "Mentir, disfarçar-se e ocultar intenções." },
+        { name: "Fortitude", attr: "con", description: "Resistir a dor, venenos, doenças e cansaço." },
+        { name: "Furtividade", attr: "des", description: "Mover-se em silêncio e esconder-se." },
+        { name: "Iniciativa", attr: "des", description: "Agir rapidamente em combate." },
+        { name: "Intimidação", attr: "car", description: "Coagir e assustar outros." },
+        { name: "Intuição", attr: "sab", description: "Perceber intenções e pressentir o perigo." },
+        { name: "Investigação", attr: "int", description: "Analisar cenas, encontrar pistas e resolver mistérios." },
+        { name: "Jogatina", attr: "car", description: "Vencer em jogos de azar e trapacear." },
+        { name: "Ladinagem", attr: "des", description: "Abrir fechaduras, desarmar armadilhas e realizar pequenos furtos." },
+        { name: "Luta", attr: "for", description: "Combate corpo a corpo." },
+        { name: "Misticismo", attr: "int", description: "Conhecimento sobre magia, criaturas e planos." },
+        { name: "Nobreza", attr: "car", description: "Lidar com a alta sociedade e burocracia." },
+        { name: "Ofício", attr: "int", description: "Exercer uma profissão (alquimista, ferreiro, etc.)." },
+        { name: "Percepção", attr: "sab", description: "Notar detalhes e perceber coisas escondidas." },
+        { name: "Pilotagem", attr: "des", description: "Operar veículos complexos (navios, aeronaves)." },
+        { name: "Pontaria", attr: "des", description: "Combate à distância." },
+        { name: "Reflexos", attr: "des", description: "Esquivar-se de ataques e perigos." },
+        { name: "Religião", attr: "sab", description: "Conhecimento sobre deuses, rituais e planos divinos." },
+        { name: "Sobrevivência", attr: "sab", description: "Orientar-se, caçar e encontrar abrigo em áreas selvagens." },
+        { name: "Urbana", attr: "sab", description: "Orientar-se, encontrar contatos e obter informações em cidades." },
+        { name: "Vontade", attr: "sab", description: "Resistir a controle mental, medo e tentações." },
+    ];
+
     // --- MODELO DE DADOS PARA UMA FICHA EM BRANCO ---
-    const createBlankCharacter = () => ({
-        name: "", subtitle: "",
-        hp: { current: 10, max: 10 }, ph: { current: 10, max: 10 }, pp: 0, ca: 10,
-        attributes: { for: 0, des: 0, con: 0, sab: 0, int: 0, car: 0 },
-        rd: { balistico: { value: 0, active: false }, concussao: { value: 0, active: false }, cortante: { value: 0, active: false }, perfurante: { value: 0, active: false }, eletrico: { value: 0, active: false }, fogo: { value: 0, active: false }, frio: { value: 0, active: false }, sonico: { value: 0, active: false }, acido: { value: 0, active: false } },
-        race: { name: "", description: "", benefits: "" },
-        stigmas: [], skills: [], powers: [],
-    });
+    const createBlankCharacter = () => {
+        const character = {
+            name: "", subtitle: "",
+            hp: { current: 10, max: 10 }, ph: { current: 10, max: 10 }, pp: 0, ca: 10,
+            attributes: { for: 0, des: 0, con: 0, sab: 0, int: 0, car: 0 },
+            rd: { balistico: { value: 0, active: false }, concussao: { value: 0, active: false }, cortante: { value: 0, active: false }, perfurante: { value: 0, active: false }, eletrico: { value: 0, active: false }, fogo: { value: 0, active: false }, frio: { value: 0, active: false }, sonico: { value: 0, active: false }, acido: { value: 0, active: false } },
+            race: { name: "", description: "", benefits: "" },
+            stigmas: [],
+            skills: {}, // Skills agora é um objeto
+            powers: [],
+        };
+        // Inicializa as perícias
+        SKILLS_LIST.forEach(skill => {
+            character.skills[skill.name] = { trained: false, value: 0 };
+        });
+        return character;
+    };
 
     // --- GERENCIAMENTO DE ESTADO (localStorage) ---
     const saveState = () => {
@@ -220,12 +261,22 @@
             </div>`);
 
         // Perícias
-        renderDynamicList('skills', char.skills, (item, index) => `
-            <div class="flex items-center gap-2">
-                <input type="text" value="${item.name || ''}" data-index="${index}" data-field="name" placeholder="Nome da Perícia" class="skills-input bg-slate-700 w-full rounded p-1 text-sm">
-                <input type="number" value="${item.value || 0}" data-index="${index}" data-field="value" class="skills-input bg-slate-700 w-16 text-center rounded p-1 text-sm font-bold">
-                <button onclick="deleteItem('skills', ${index})" class="bg-red-600 hover:bg-red-500 text-white font-bold text-xs w-5 h-5 rounded-full transition-colors">X</button>
-            </div>`);
+        const skillsContainer = document.getElementById('skills-container');
+        skillsContainer.innerHTML = SKILLS_LIST.map(skillInfo => {
+            const skillData = char.skills[skillInfo.name] || { trained: false, value: 0 };
+            return `
+            <div class="flex items-center gap-2 group relative">
+                <input type="checkbox" data-skill-name="${skillInfo.name}" data-field="trained" ${skillData.trained ? 'checked' : ''} class="skills-input w-4 h-4 rounded bg-slate-700 border-slate-600 text-amber-500 focus:ring-amber-500 cursor-pointer">
+                <label class="flex-1 text-sm">${skillInfo.name} (${skillInfo.attr.toUpperCase()})</label>
+                <input type="number" data-skill-name="${skillInfo.name}" data-field="value" value="${skillData.value}" class="skills-input bg-slate-700 w-16 text-center rounded p-1 text-sm font-bold">
+                <div class="absolute left-full ml-2 hidden group-hover:block bg-slate-700 text-xs p-2 rounded-md shadow-lg z-10 w-48 border border-slate-600">
+                    <p class="font-bold">${skillInfo.name}</p>
+                    <p class="text-slate-400">${skillInfo.description}</p>
+                </div>
+                <span class="text-xs font-mono text-slate-500 cursor-help">i</span>
+            </div>
+            `;
+        }).join('');
         
         // Poderes
         const actionTypes = ["Ação", "Ação Bônus", "Ação Livre", "Reação", "Ação Completa", "Movimento", "Passivo"];
@@ -235,7 +286,7 @@
                     <input type="text" value="${item.name || ''}" data-index="${index}" data-field="name" placeholder="Nome do Poder" class="powers-input text-xl font-bold text-amber-300 bg-transparent flex-grow outline-none focus:text-amber-200">
                     <button onclick="deleteItem('powers', ${index})" class="bg-red-600 hover:bg-red-500 text-white font-bold text-xs w-6 h-6 rounded-full transition-colors">X</button>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-2">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
                     <div>
                         <label class="text-xs font-semibold">Tipo de Ação</label>
                         <select data-index="${index}" data-field="action" class="powers-input bg-slate-700 w-full rounded p-1 text-sm">
@@ -245,6 +296,10 @@
                     <div>
                         <label class="text-xs font-semibold">Custo em PH</label>
                         <input type="number" value="${item.cost || 0}" data-index="${index}" data-field="cost" class="powers-input bg-slate-700 w-full rounded p-1 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold">Custo em PP</label>
+                        <input type="number" value="${item.ppCost || 0}" data-index="${index}" data-field="ppCost" class="powers-input bg-slate-700 w-full rounded p-1 text-sm">
                     </div>
                 </div>
                 <div class="space-y-2">
@@ -283,7 +338,9 @@
         const el = event.target;
         const id = el.id;
 
-        if (id.startsWith('attr-')) {
+        if (id === 'character-name' || id === 'character-subtitle') {
+            char[id.replace('character-', '')] = el.value;
+        } else if (id.startsWith('attr-')) {
             char.attributes[id.replace('attr-', '')] = el.value;
         } else if (id.includes('-')) {
             const [key, prop] = id.split('-');
@@ -295,13 +352,32 @@
             } else {
                 char.rd[type].value = el.value;
             }
-        } else if (el.classList.contains('stigmas-input') || el.classList.contains('skills-input') || el.classList.contains('powers-input')) {
+        } else if (el.classList.contains('skills-input')) {
+            const skillName = el.dataset.skillName;
+            const field = el.dataset.field;
+            const skillInfo = SKILLS_LIST.find(s => s.name === skillName);
+            const baseAttrValue = parseInt(char.attributes[skillInfo.attr]) || 0;
+            const maxSkillValue = Math.min(baseAttrValue * 2, 20);
+
+            if (field === 'trained') {
+                char.skills[skillName].trained = el.checked;
+            } else if (field === 'value') {
+                let value = parseInt(el.value) || 0;
+                if (value > maxSkillValue) {
+                    value = maxSkillValue;
+                    el.value = value; // Corrige o valor no input
+                }
+                char.skills[skillName].value = value;
+            }
+        } else if (el.classList.contains('stigmas-input') || el.classList.contains('powers-input')) {
             const key = el.className.split(' ')[0].replace('-input', '');
             const index = el.dataset.index;
             const field = el.dataset.field;
             char[key][index][field] = el.value;
-        } else {
+        } else if (id === 'character-name' || id === 'character-subtitle') {
             char[id.replace('character-', '')] = el.value;
+        } else {
+            char[id] = el.value;
         }
 
         if (id === 'character-name') {
@@ -322,7 +398,7 @@
         let newItem = {};
         if (key === 'skills') newItem = { name: '', value: 0 };
         if (key === 'stigmas') newItem = { name: '', description: '' };
-        if (key === 'powers') newItem = { name: '', action: 'Ação', cost: 0, description: '', flaws: '', extras: '' };
+        if (key === 'powers') newItem = { name: '', action: 'Ação', cost: 0, ppCost: 0, description: '', flaws: '', extras: '' };
         
         char[key].push(newItem);
         saveState();
