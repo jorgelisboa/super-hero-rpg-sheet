@@ -213,8 +213,14 @@
         document.getElementById('hp-max').value = char.hp.max;
         document.getElementById('ph-current').value = char.ph.current;
         document.getElementById('ph-max').value = char.ph.max;
-        document.getElementById('pp-total').value = char.pp;
+        // --- Cálculos Derivados ---
+        const totalAttrPoints = Object.values(char.attributes).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+        const totalPowerPpCost = char.powers.reduce((sum, power) => sum + (parseInt(power.ppCost) || 0), 0);
+        char.pp = (totalAttrPoints * 2) + totalPowerPpCost;
         
+        document.getElementById('pp-total').value = char.pp;
+        document.getElementById('pp-total').readOnly = true;
+
         // Atributos e Defesas
         Object.keys(char.attributes).forEach(key => {
             document.getElementById(`attr-${key}`).value = char.attributes[key];
@@ -251,16 +257,28 @@
         const skillsContainer = document.getElementById('skills-container');
         skillsContainer.innerHTML = SKILLS_LIST.map(skillInfo => {
             const skillData = char.skills[skillInfo.name] || { trained: false, value: 0 };
+            const baseAttrValue = parseInt(char.attributes[skillInfo.attr]) || 0;
+            const addedValue = parseInt(skillData.value) || 0;
+            const totalValue = Math.min(baseAttrValue + addedValue, 20);
+
             return `
-            <div class="flex items-center gap-2 group relative">
-                <input type="checkbox" data-skill-name="${skillInfo.name}" data-field="trained" ${skillData.trained ? 'checked' : ''} class="skills-input w-4 h-4 rounded bg-slate-700 border-slate-600 text-amber-500 focus:ring-amber-500 cursor-pointer">
-                <label class="flex-1 text-sm">${skillInfo.name} (${skillInfo.attr.toUpperCase()})</label>
-                <input type="number" data-skill-name="${skillInfo.name}" data-field="value" value="${skillData.value}" class="skills-input bg-slate-700 w-16 text-center rounded p-1 text-sm font-bold">
-                <div class="absolute left-full ml-2 hidden group-hover:block bg-slate-700 text-xs p-2 rounded-md shadow-lg z-10 w-48 border border-slate-600">
-                    <p class="font-bold">${skillInfo.name}</p>
-                    <p class="text-slate-400">${skillInfo.description}</p>
+            <div class="flex items-center justify-between gap-2 group relative">
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" data-skill-name="${skillInfo.name}" data-field="trained" ${skillData.trained ? 'checked' : ''} class="skills-input w-4 h-4 rounded bg-slate-700 border-slate-600 text-amber-500 focus:ring-amber-500 cursor-pointer">
+                    <label class="text-sm">${skillInfo.name}</label>
+                    <span class="text-xs font-mono text-slate-500 cursor-help">i</span>
+                    <div class="absolute left-8 -top-2 hidden group-hover:block bg-slate-700 text-xs p-2 rounded-md shadow-lg z-10 w-48 border border-slate-600">
+                        <p class="font-bold">${skillInfo.name}</p>
+                        <p class="text-slate-400">${skillInfo.description}</p>
+                    </div>
                 </div>
-                <span class="text-xs font-mono text-slate-500 cursor-help">i</span>
+                <div class="flex items-center gap-1 text-sm">
+                    <span class="font-bold w-8 text-center bg-slate-900 rounded p-1">${totalValue}</span>
+                    <span class="text-slate-400">=</span>
+                    <span class="text-slate-400 w-8 text-center p-1">(${baseAttrValue})</span>
+                    <span class="text-slate-400">+</span>
+                    <input type="number" data-skill-name="${skillInfo.name}" data-field="value" value="${addedValue}" class="skills-input bg-slate-700 w-12 text-center rounded p-1 font-bold">
+                </div>
             </div>
             `;
         }).join('');
@@ -342,29 +360,36 @@
         } else if (el.classList.contains('skills-input')) {
             const skillName = el.dataset.skillName;
             const field = el.dataset.field;
-            const skillInfo = SKILLS_LIST.find(s => s.name === skillName);
-            const baseAttrValue = parseInt(char.attributes[skillInfo.attr]) || 0;
-            const maxSkillValue = Math.min(baseAttrValue * 2, 20);
 
             if (field === 'trained') {
                 char.skills[skillName].trained = el.checked;
             } else if (field === 'value') {
-                let value = parseInt(el.value) || 0;
-                if (value > maxSkillValue) {
-                    value = maxSkillValue;
-                    el.value = value; // Corrige o valor no input
+                const skillInfo = SKILLS_LIST.find(s => s.name === skillName);
+                const baseAttrValue = parseInt(char.attributes[skillInfo.attr]) || 0;
+                let addedValue = parseInt(el.value) || 0;
+
+                const maxAddedValue = Math.min(baseAttrValue, 20 - baseAttrValue);
+
+                if (addedValue < 0) addedValue = 0;
+                if (addedValue > maxAddedValue) {
+                    addedValue = maxAddedValue;
+                    el.value = addedValue;
                 }
-                char.skills[skillName].value = value;
+
+                char.skills[skillName].value = addedValue;
             }
         } else if (el.classList.contains('stigmas-input') || el.classList.contains('powers-input')) {
             const key = el.className.split(' ')[0].replace('-input', '');
             const index = el.dataset.index;
             const field = el.dataset.field;
             char[key][index][field] = el.value;
-        } else if (id === 'character-name' || id === 'character-subtitle') {
-            char[id.replace('character-', '')] = el.value;
         } else {
             char[id] = el.value;
+        }
+
+        // Re-render if a value could affect other parts of the sheet
+        if (id.startsWith('attr-') || el.classList.contains('skills-input') || el.classList.contains('powers-input')) {
+             renderSheet();
         }
 
         if (id === 'character-name') {
