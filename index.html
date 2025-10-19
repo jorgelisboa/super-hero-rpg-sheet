@@ -204,6 +204,17 @@
         const savedState = localStorage.getItem('rpgSheetsState');
         if (savedState) {
             state = JSON.parse(savedState);
+            // Garante que a estrutura de perícias seja a correta (objeto)
+            state.characters.forEach(char => {
+                if (!char.skills || Array.isArray(char.skills)) {
+                    char.skills = {};
+                }
+                SKILLS_LIST.forEach(skillInfo => {
+                    if (!char.skills[skillInfo.name]) {
+                        char.skills[skillInfo.name] = { trained: false, value: 0 };
+                    }
+                });
+            });
         } else {
             // Inicializa com fichas em branco se não houver nada salvo
             for (let i = 0; i < MAX_CHARACTERS; i++) {
@@ -272,7 +283,7 @@
             const skillData = char.skills[skillInfo.name] || { trained: false, value: 0 };
             const baseAttrValue = parseInt(char.attributes[skillInfo.attr]) || 0;
             const addedValue = parseInt(skillData.value) || 0;
-            const totalValue = Math.min(baseAttrValue + addedValue, 20);
+            const totalValue = baseAttrValue + addedValue;
 
             return `
             <div class="flex items-center justify-between gap-2 group relative">
@@ -377,18 +388,8 @@
             if (field === 'trained') {
                 char.skills[skillName].trained = el.checked;
             } else if (field === 'value') {
-                const skillInfo = SKILLS_LIST.find(s => s.name === skillName);
-                const baseAttrValue = parseInt(char.attributes[skillInfo.attr]) || 0;
                 let addedValue = parseInt(el.value) || 0;
-
-                const maxAddedValue = Math.min(baseAttrValue, 20 - baseAttrValue);
-
                 if (addedValue < 0) addedValue = 0;
-                if (addedValue > maxAddedValue) {
-                    addedValue = maxAddedValue;
-                    el.value = addedValue;
-                }
-
                 char.skills[skillName].value = addedValue;
             }
         } else if (el.classList.contains('stigmas-input') || el.classList.contains('powers-input')) {
@@ -421,13 +422,17 @@
     const addItem = (key) => {
         const char = state.characters[state.activeIndex];
         let newItem = {};
-        if (key === 'skills') newItem = { name: '', value: 0 };
-        if (key === 'stigmas') newItem = { name: '', description: '' };
-        if (key === 'powers') newItem = { name: '', action: 'Ação', cost: 0, ppCost: 0, description: '', flaws: '', extras: '' };
+        if (key === 'stigmas') {
+            newItem = { name: '', description: '' };
+        } else if (key === 'powers') {
+            newItem = { name: '', action: 'Ação', cost: 0, ppCost: 0, description: '', flaws: '', extras: '' };
+        }
         
-        char[key].push(newItem);
-        saveState();
-        renderSheet();
+        if (Object.keys(newItem).length > 0) {
+            char[key].push(newItem);
+            saveState();
+            renderSheet();
+        }
     };
     
     const deleteItem = (key, index) => {
@@ -440,11 +445,14 @@
     };
 
     // --- INICIALIZAÇÃO E EVENT LISTENERS ---
-    document.addEventListener('DOMContentLoaded', () => {
+    try {
         loadState();
         renderSheet();
         document.getElementById('sheet-content').addEventListener('input', updateCharacterData);
-    });
+    } catch (e) {
+        console.error("Erro ao inicializar a ficha:", e);
+        document.body.innerHTML = `<div class="text-red-500 p-8">Erro ao carregar a ficha. Verifique o console.</div>`;
+    }
 
     </script>
 </body>
