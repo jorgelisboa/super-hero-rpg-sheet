@@ -425,7 +425,7 @@
                 if (addedValue < 0) addedValue = 0;
                 char.skills[skillName].value = addedValue;
             }
-        } else if (el.classList.contains('stigmas-input') || el.classList.contains('powers-input')) {
+        } else if (el.classList.contains('stigmas-input')) {
             const key = el.className.split(' ')[0].replace('-input', '');
             const index = el.dataset.index;
             const field = el.dataset.field;
@@ -435,7 +435,7 @@
         }
 
         // Re-render if a value could affect other parts of the sheet
-        if (id.startsWith('attr-') || el.classList.contains('skills-input') || el.classList.contains('powers-input') || id === 'ph-mental-attr' || id === 'ph-extra' || el.name === 'hp-option') {
+        if (id.startsWith('attr-') || el.classList.contains('skills-input') || id === 'ph-mental-attr' || id === 'ph-extra' || el.name === 'hp-option') {
             // Recalculate HP max if constitution changes
             if (id === 'attr-con') {
                 const selectedHpOption = HP_OPTIONS[char.hpOptionIndex];
