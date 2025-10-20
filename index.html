@@ -144,6 +144,7 @@
     };
 
     // --- DADOS CONSTANTES ---
+    const AVAILABLE_POWERS = {};
     const HP_OPTIONS = [
         { ppCost: 0, hpBase: 8, label: "Padrão (8 HP, 0 PP)" },
         { ppCost: 5, hpBase: 10, label: "Opção 2 (10 HP, 5 PP)" },
@@ -335,6 +336,7 @@
         }).join('');
         
         // Poderes
+        const actionTypes = ["Ação", "Ação Bônus", "Ação Livre", "Reação", "Ação Completa", "Movimento", "Passivo"];
         renderDynamicList('powers', char.powers, (item, index) => {
             // New template for configured powers
             if (item.id) {
@@ -369,6 +371,35 @@
                     </div>
                 </div>`;
             }
+            // Fallback for old, free-text powers
+            return `
+            <div class="border-t border-slate-700 pt-4">
+                <div class="flex justify-between items-center mb-2">
+                    <input type="text" value="${item.name || ''}" data-index="${index}" data-field="name" placeholder="Nome do Poder" class="powers-input text-xl font-bold text-amber-300 bg-transparent flex-grow outline-none focus:text-amber-200">
+                    <button onclick="deleteItem('powers', ${index})" class="bg-red-600 hover:bg-red-500 text-white font-bold text-xs w-6 h-6 rounded-full transition-colors">X</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
+                    <div>
+                        <label class="text-xs font-semibold">Tipo de Ação</label>
+                        <select data-index="${index}" data-field="action" class="powers-input bg-slate-700 w-full rounded p-1 text-sm">
+                            ${actionTypes.map(type => `<option value="${type}" ${item.action === type ? 'selected' : ''}>${type}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold">Custo em PH</label>
+                        <input type="number" value="${item.cost || 0}" data-index="${index}" data-field="cost" class="powers-input bg-slate-700 w-full rounded p-1 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold">Custo em PP</label>
+                        <input type="number" value="${item.ppCost || 0}" data-index="${index}" data-field="ppCost" class="powers-input bg-slate-700 w-full rounded p-1 text-sm">
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div><label class="text-xs font-semibold">Descrição</label><textarea data-index="${index}" data-field="description" placeholder="Descrição do poder..." class="powers-input text-sm bg-slate-700 w-full rounded p-1">${item.description || ''}</textarea></div>
+                    <div><label class="text-xs font-semibold">Falhas (Opcional)</label><textarea data-index="${index}" data-field="flaws" placeholder="Desvantagens do poder..." class="powers-input text-sm bg-slate-700 w-full rounded p-1">${item.flaws || ''}</textarea></div>
+                    <div><label class="text-xs font-semibold">Extras (Opcional)</label><textarea data-index="${index}" data-field="extras" placeholder="Vantagens do poder..." class="powers-input text-sm bg-slate-700 w-full rounded p-1">${item.extras || ''}</textarea></div>
+                </div>
+            </div>`;
         });
 
         renderCharacterTabs();
@@ -496,10 +527,9 @@
 
     const openPowerSelectionModal = () => {
         const powerListContainer = document.getElementById('power-list');
-        const availablePowers = { afligir }; // Assuming 'afligir' is globally available
 
-        powerListContainer.innerHTML = Object.keys(availablePowers).map(key => {
-            const power = availablePowers[key];
+        powerListContainer.innerHTML = Object.keys(AVAILABLE_POWERS).map(key => {
+            const power = AVAILABLE_POWERS[key];
             return `<button onclick="selectPower('${key}')" class="w-full text-left bg-slate-700 hover:bg-slate-600 p-3 rounded-lg transition-colors">
                         <h3 class="font-bold text-lg text-amber-400">${power.nome}</h3>
                         <p class="text-sm text-slate-400">${power.descricao.substring(0, 100)}...</p>
@@ -515,7 +545,7 @@
     };
 
     const openPowerConfigModal = (powerKey) => {
-        const powerData = window[powerKey];
+        const powerData = AVAILABLE_POWERS[powerKey];
         const configContainer = document.getElementById('power-config-content');
 
         const conditionsHtml = powerData.condicoes.map(cond => `
@@ -573,7 +603,7 @@
     };
 
     const updatePowerConfigCost = (powerKey) => {
-        const powerData = window[powerKey];
+        const powerData = AVAILABLE_POWERS[powerKey];
         let totalPp = 0;
 
         document.querySelectorAll('#power-config-content input[name="condition"]:checked').forEach(input => {
@@ -591,7 +621,7 @@
 
     const saveConfiguredPower = (powerKey) => {
         const char = state.characters[state.activeIndex];
-        const powerData = window[powerKey];
+        const powerData = AVAILABLE_POWERS[powerKey];
 
         let ppCost = 0;
         const selectedConditions = [];
