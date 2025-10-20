@@ -487,17 +487,11 @@
     const openModal = (modalId) => {
         document.getElementById(modalId).classList.remove('hidden');
         document.getElementById(modalId).classList.add('flex');
-        if (modalId === 'power-config-modal') {
-            document.body.setAttribute('data-config-modal-opened', 'true');
-        }
     };
 
     const closeModal = (modalId) => {
         document.getElementById(modalId).classList.add('hidden');
         document.getElementById(modalId).classList.remove('flex');
-        if (modalId === 'power-config-modal') {
-            document.body.removeAttribute('data-config-modal-opened');
-        }
     };
 
     const openPowerSelectionModal = () => {
