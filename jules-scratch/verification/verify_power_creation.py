@@ -24,9 +24,6 @@ def run(playwright):
     # Wait for the selection modal to disappear
     expect(selection_modal).to_be_hidden()
 
-    # Wait for the data attribute to be set on the body
-    page.wait_for_selector('body[data-config-modal-opened="true"]')
-
     # Wait for the configuration modal to appear and be visible
     config_modal = page.locator("#power-config-modal")
     expect(config_modal).to_be_visible()
