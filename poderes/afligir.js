@@ -1,4 +1,4 @@
-const afligir = {
+AVAILABLE_POWERS.afligir = {
   nome: "Afligir",
   tipo: "Ação Padrão",
   descricao: "Você impõe uma ou mais condições em um alvo com uma ação. A CD para o alvo resistir é igual a 10 + Habilidade Relacionada ao Poder (max 10) + PP’s gastos/5. Escolha as condições (Atordoado, Lento, Vulnerável, etc.). A CD é resistida por um teste de Habilidade Relacionada ao Poder. A cada turno do alvo ele pode realizar um teste para sair da condição, senão fica com a condição por 1 minuto.",
