@@ -43,6 +43,7 @@
                                     <span class="text-lg font-bold text-slate-400">/</span>
                                     <input type="number" id="hp-max" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
                                 </div>
+                                <div id="hp-options" class="mt-2 text-center"></div>
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1 text-center">Pontos de Heroísmo (PH)</label>
@@ -50,6 +51,18 @@
                                     <input type="number" id="ph-current" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
                                     <span class="text-lg font-bold text-slate-400">/</span>
                                     <input type="number" id="ph-max" class="bg-slate-700 text-center text-lg w-full rounded-md border-slate-600 focus:ring-amber-400 focus:border-amber-400">
+                                </div>
+                                <div class="mt-2 text-center">
+                                    <label class="text-sm text-slate-400">Atributo Mental para PH:</label>
+                                    <select id="ph-mental-attr" class="bg-slate-700 text-sm rounded-md p-1">
+                                        <option value="int">Intelecto</option>
+                                        <option value="sab">Sabedoria</option>
+                                        <option value="car">Carisma</option>
+                                    </select>
+                                </div>
+                                <div class="mt-2 text-center">
+                                    <label class="text-sm text-slate-400">PH Adicional (1 PP para cada +2 PH):</label>
+                                    <input type="number" id="ph-extra" class="bg-slate-700 w-20 text-center rounded-md p-1" min="0" step="2">
                                 </div>
                             </div>
                              <div class="col-span-2 pt-2">
@@ -131,6 +144,13 @@
     };
 
     // --- DADOS CONSTANTES ---
+    const HP_OPTIONS = [
+        { ppCost: 0, hpBase: 8, label: "Padrão (8 HP, 0 PP)" },
+        { ppCost: 5, hpBase: 10, label: "Opção 2 (10 HP, 5 PP)" },
+        { ppCost: 10, hpBase: 12, label: "Opção 3 (12 HP, 10 PP)" },
+        { ppCost: 15, hpBase: 20, label: "Tanque (20 HP, 15 PP)" },
+    ];
+
     const SKILLS_LIST = [
         { name: "Acrobacia", attr: "des", description: "Equilíbrio, proezas acrobáticas e quedas." },
         { name: "Adestramento", attr: "car", description: "Comandar, treinar e cuidar de animais." },
@@ -167,7 +187,9 @@
     const createBlankCharacter = () => {
         const character = {
             name: "", subtitle: "",
-            hp: { current: 10, max: 10 }, ph: { current: 10, max: 10 }, pp: 0, ca: 10,
+            hp: { current: 8, max: 8 }, ph: { current: 10, max: 10, mentalAttr: 'int', extra: 0 },
+            hpOptionIndex: 0, // Índice da opção de HP selecionada
+            pp: 0, ca: 10,
             attributes: { for: 0, des: 0, con: 0, sab: 0, int: 0, car: 0 },
             rd: { balistico: { value: 0, active: false }, concussao: { value: 0, active: false }, cortante: { value: 0, active: false }, perfurante: { value: 0, active: false }, eletrico: { value: 0, active: false }, fogo: { value: 0, active: false }, frio: { value: 0, active: false }, sonico: { value: 0, active: false }, acido: { value: 0, active: false } },
             race: { name: "", description: "", benefits: "" },
@@ -224,10 +246,25 @@
         document.getElementById('hp-max').value = char.hp.max;
         document.getElementById('ph-current').value = char.ph.current;
         document.getElementById('ph-max').value = char.ph.max;
+        document.getElementById('ph-mental-attr').value = char.ph.mentalAttr;
+        document.getElementById('ph-extra').value = char.ph.extra;
+
+        // Render HP Options
+        const hpOptionsContainer = document.getElementById('hp-options');
+        hpOptionsContainer.innerHTML = HP_OPTIONS.map((option, index) => `
+            <label class="text-sm p-1 rounded-md ${char.hpOptionIndex == index ? 'bg-amber-600' : 'bg-slate-700'}">
+                <input type="radio" name="hp-option" value="${index}" ${char.hpOptionIndex == index ? 'checked' : ''} class="hidden">
+                ${option.label}
+            </label>
+        `).join(' ');
+
         // --- Cálculos Derivados ---
         const totalAttrPoints = Object.values(char.attributes).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
         const totalPowerPpCost = char.powers.reduce((sum, power) => sum + (parseInt(power.ppCost) || 0), 0);
-        char.pp = (totalAttrPoints * 2) + totalPowerPpCost;
+        const hpPpCost = HP_OPTIONS[char.hpOptionIndex].ppCost;
+        const phPpCost = Math.floor((parseInt(char.ph.extra) || 0) / 2);
+
+        char.pp = (totalAttrPoints * 2) + totalPowerPpCost + hpPpCost + phPpCost;
         
         document.getElementById('pp-total').value = char.pp;
         document.getElementById('pp-total').readOnly = true;
@@ -358,6 +395,15 @@
             char[id.replace('character-', '')] = el.value;
         } else if (id.startsWith('attr-')) {
             char.attributes[id.replace('attr-', '')] = el.value;
+        } else if (id === 'ph-mental-attr' || id === 'ph-extra') {
+            const prop = id.replace('ph-', '');
+            char.ph[prop] = el.value;
+        } else if (el.name === 'hp-option') {
+            char.hpOptionIndex = parseInt(el.value);
+            const selectedHpOption = HP_OPTIONS[char.hpOptionIndex];
+            const constitution = parseInt(char.attributes.con) || 0;
+            char.hp.max = selectedHpOption.hpBase + constitution;
+            char.hp.current = char.hp.max; // Reset current HP to max
         } else if (id.includes('-')) {
             const [key, prop] = id.split('-');
             char[key][prop] = el.value;
@@ -389,8 +435,19 @@
         }
 
         // Re-render if a value could affect other parts of the sheet
-        if (id.startsWith('attr-') || el.classList.contains('skills-input') || el.classList.contains('powers-input')) {
-             renderSheet();
+        if (id.startsWith('attr-') || el.classList.contains('skills-input') || el.classList.contains('powers-input') || id === 'ph-mental-attr' || id === 'ph-extra' || el.name === 'hp-option') {
+            // Recalculate HP max if constitution changes
+            if (id === 'attr-con') {
+                const selectedHpOption = HP_OPTIONS[char.hpOptionIndex];
+                char.hp.max = selectedHpOption.hpBase + (parseInt(char.attributes.con) || 0);
+            }
+            // Recalculate PH max if relevant attribute changes
+            if (id === `attr-${char.ph.mentalAttr}` || id === 'ph-mental-attr' || id === 'ph-extra') {
+                const mentalAttrValue = parseInt(char.attributes[char.ph.mentalAttr]) || 0;
+                const extraPh = parseInt(char.ph.extra) || 0;
+                char.ph.max = 10 + mentalAttrValue + extraPh;
+            }
+            renderSheet();
         }
 
         if (id === 'character-name') {
