@@ -547,17 +547,35 @@
     const openPowerConfigModal = (powerKey) => {
         const powerData = AVAILABLE_POWERS[powerKey];
         const configContainer = document.getElementById('power-config-content');
+        let primaryOptionsHtml = '';
 
-        const conditionsHtml = powerData.condicoes.map(cond => `
-            <label class="flex items-center gap-3 p-2 rounded-md bg-slate-700 hover:bg-slate-600 cursor-pointer">
-                <input type="checkbox" name="condition" value="${cond.nome}" data-cost="${cond.custo}" onchange="updatePowerConfigCost('${powerKey}')">
+        // Generate primary options based on cost type
+        if (powerData.tipoCusto === 'dados') {
+            primaryOptionsHtml = `
                 <div>
-                    <span class="font-semibold">${cond.nome} (${cond.nivel})</span>
-                    <span class="text-amber-400 font-mono text-sm ml-2">[+${cond.custo} PP]</span>
-                    <p class="text-xs text-slate-400">${cond.descricao}</p>
+                    <h3 class="text-xl font-bold mb-3 border-b border-slate-700 pb-2 text-amber-300">${powerData.labelDados}</h3>
+                    <div class="flex items-center gap-2">
+                         <input type="number" id="power-dice-input" class="bg-slate-700 text-center text-lg w-24 rounded-md p-1" value="1" min="1" oninput="updatePowerConfigCost('${powerKey}')">
+                         <span class="text-sm text-slate-400">(${powerData.ppPorDado} PP por dado)</span>
+                    </div>
                 </div>
-            </label>
-        `).join('');
+            `;
+        } else if (powerData.condicoes) {
+            primaryOptionsHtml = `
+                <div>
+                    <h3 class="text-xl font-bold mb-3 border-b border-slate-700 pb-2 text-amber-300">Condições</h3>
+                    <div class="space-y-2">${powerData.condicoes.map(cond => `
+                        <label class="flex items-center gap-3 p-2 rounded-md bg-slate-700 hover:bg-slate-600 cursor-pointer">
+                            <input type="checkbox" name="condition" value="${cond.nome}" data-cost="${cond.custo}" onchange="updatePowerConfigCost('${powerKey}')">
+                            <div>
+                                <span class="font-semibold">${cond.nome} (${cond.nivel})</span>
+                                <span class="text-amber-400 font-mono text-sm ml-2">[+${cond.custo} PP]</span>
+                                <p class="text-xs text-slate-400">${cond.descricao}</p>
+                            </div>
+                        </label>
+                    `).join('')}</div>
+                </div>`;
+        }
 
         const modifiersHtml = powerData.modificadores.map(mod => `
             <label class="flex items-center gap-3 p-2 rounded-md bg-slate-700 hover:bg-slate-600 cursor-pointer">
@@ -575,10 +593,7 @@
             <p class="text-sm text-slate-400 mb-6">${powerData.descricao}</p>
 
             <div class="space-y-6">
-                <div>
-                    <h3 class="text-xl font-bold mb-3 border-b border-slate-700 pb-2 text-amber-300">Condições</h3>
-                    <div class="space-y-2">${conditionsHtml}</div>
-                </div>
+                ${primaryOptionsHtml}
 
                 <div>
                     <h3 class="text-xl font-bold mb-3 border-b border-slate-700 pb-2 text-amber-300">Modificadores</h3>
@@ -606,14 +621,21 @@
         const powerData = AVAILABLE_POWERS[powerKey];
         let totalPp = 0;
 
-        document.querySelectorAll('#power-config-content input[name="condition"]:checked').forEach(input => {
-            totalPp += parseInt(input.dataset.cost);
-        });
+        if (powerData.tipoCusto === 'dados') {
+            const diceInput = document.getElementById('power-dice-input');
+            const numDice = parseInt(diceInput.value) || 0;
+            totalPp += numDice * powerData.ppPorDado;
+        } else if (powerData.condicoes) {
+            document.querySelectorAll('#power-config-content input[name="condition"]:checked').forEach(input => {
+                totalPp += parseInt(input.dataset.cost);
+            });
+        }
+
         document.querySelectorAll('#power-config-content input[name="modifier"]:checked').forEach(input => {
             totalPp += parseInt(input.dataset.cost);
         });
 
-        const totalPh = Math.floor(totalPp / 5);
+        const totalPh = powerData.phRegra ? powerData.phRegra(totalPp) : Math.floor(totalPp / 5);
 
         document.getElementById('power-total-pp').innerText = `${totalPp} PP`;
         document.getElementById('power-total-ph').innerText = `${totalPh} PH`;
@@ -624,19 +646,32 @@
         const powerData = AVAILABLE_POWERS[powerKey];
 
         let ppCost = 0;
+        let numDice = 0;
         const selectedConditions = [];
         const selectedModifiers = [];
+        let extras = [];
 
-        document.querySelectorAll('#power-config-content input[name="condition"]:checked').forEach(input => {
-            ppCost += parseInt(input.dataset.cost);
-            selectedConditions.push(input.value);
-        });
+        if (powerData.tipoCusto === 'dados') {
+            const diceInput = document.getElementById('power-dice-input');
+            numDice = parseInt(diceInput.value) || 0;
+            ppCost += numDice * powerData.ppPorDado;
+            extras.push(`${numDice} ${powerData.labelDados}`);
+        } else if (powerData.condicoes) {
+            document.querySelectorAll('#power-config-content input[name="condition"]:checked').forEach(input => {
+                ppCost += parseInt(input.dataset.cost);
+                selectedConditions.push(input.value);
+            });
+             if(selectedConditions.length > 0) extras.push(`Condições: ${selectedConditions.join(', ')}`);
+        }
+
         document.querySelectorAll('#power-config-content input[name="modifier"]:checked').forEach(input => {
             ppCost += parseInt(input.dataset.cost);
             selectedModifiers.push(input.value);
         });
+        if(selectedModifiers.length > 0) extras.push(`Modificadores: ${selectedModifiers.join(', ')}`);
 
-        const cost = Math.floor(ppCost / 5);
+
+        const cost = powerData.phRegra ? powerData.phRegra(ppCost) : Math.floor(ppCost / 5);
 
         const newPower = {
             id: powerKey,
@@ -646,7 +681,8 @@
             ppCost: ppCost,
             description: powerData.descricao,
             flaws: '', // Future implementation
-            extras: `Condições: ${selectedConditions.join(', ') || 'Nenhuma'}. Modificadores: ${selectedModifiers.join(', ') || 'Nenhum'}.`,
+            extras: extras.join('. '),
+            numDice: numDice,
             selectedConditions: selectedConditions,
             selectedModifiers: selectedModifiers,
         };
@@ -678,6 +714,8 @@
 
     </script>
     <script src="./poderes/afligir.js"></script>
+    <script src="./poderes/dano.js"></script>
+    <script src="./poderes/cura.js"></script>
 
     <!-- Modal de Seleção de Poder -->
     <div id="power-selection-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
