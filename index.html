@@ -223,6 +223,9 @@
                         char.skills[skillInfo.name] = { trained: false, value: 0 };
                     }
                 });
+                if (!char.powers || !Array.isArray(char.powers)) {
+                    char.powers = [];
+                }
             });
         } else {
             // Inicializa com fichas em branco se não houver nada salvo
@@ -332,35 +335,41 @@
         }).join('');
         
         // Poderes
-        const actionTypes = ["Ação", "Ação Bônus", "Ação Livre", "Reação", "Ação Completa", "Movimento", "Passivo"];
-        renderDynamicList('powers', char.powers, (item, index) => `
-            <div class="border-t border-slate-700 pt-4">
-                <div class="flex justify-between items-center mb-2">
-                    <input type="text" value="${item.name || ''}" data-index="${index}" data-field="name" placeholder="Nome do Poder" class="powers-input text-xl font-bold text-amber-300 bg-transparent flex-grow outline-none focus:text-amber-200">
-                    <button onclick="deleteItem('powers', ${index})" class="bg-red-600 hover:bg-red-500 text-white font-bold text-xs w-6 h-6 rounded-full transition-colors">X</button>
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
-                    <div>
-                        <label class="text-xs font-semibold">Tipo de Ação</label>
-                        <select data-index="${index}" data-field="action" class="powers-input bg-slate-700 w-full rounded p-1 text-sm">
-                            ${actionTypes.map(type => `<option value="${type}" ${item.action === type ? 'selected' : ''}>${type}</option>`).join('')}
-                        </select>
+        renderDynamicList('powers', char.powers, (item, index) => {
+            // New template for configured powers
+            if (item.id) {
+                return `
+                <div class="border-t border-slate-700 pt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-xl font-bold text-amber-300">${item.name}</h3>
+                        <button onclick="deleteItem('powers', ${index})" class="bg-red-600 hover:bg-red-500 text-white font-bold text-xs w-6 h-6 rounded-full transition-colors">X</button>
                     </div>
-                    <div>
-                        <label class="text-xs font-semibold">Custo em PH</label>
-                        <input type="number" value="${item.cost || 0}" data-index="${index}" data-field="cost" class="powers-input bg-slate-700 w-full rounded p-1 text-sm">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2 text-sm">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400">Tipo de Ação</label>
+                            <div class="bg-slate-700/50 w-full rounded p-1 ">${item.action}</div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400">Custo em PH</label>
+                            <div class="bg-slate-700/50 w-full rounded p-1 font-mono">${item.cost}</div>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-400">Custo em PP</label>
+                            <div class="bg-slate-700/50 w-full rounded p-1 font-mono">${item.ppCost}</div>
+                        </div>
                     </div>
-                    <div>
-                        <label class="text-xs font-semibold">Custo em PP</label>
-                        <input type="number" value="${item.ppCost || 0}" data-index="${index}" data-field="ppCost" class="powers-input bg-slate-700 w-full rounded p-1 text-sm">
+                    <div class="space-y-2 text-sm">
+                        <div><label class="text-xs font-semibold text-slate-400">Descrição</label>
+                         <div class="bg-slate-700/50 w-full rounded p-2 text-slate-300">${item.description}</div>
+                        </div>
+                        <div><label class="text-xs font-semibold text-slate-400">Extras</label>
+                         <div class="bg-slate-700/50 w-full rounded p-2 text-slate-300">${item.extras}</div>
+                        </div>
+                        <div><label class="text-xs font-semibold text-slate-400">Falhas (Opcional)</label><textarea data-index="${index}" data-field="flaws" placeholder="Desvantagens do poder..." class="powers-input text-sm bg-slate-700 w-full rounded p-1">${item.flaws || ''}</textarea></div>
                     </div>
-                </div>
-                <div class="space-y-2">
-                    <div><label class="text-xs font-semibold">Descrição</label><textarea data-index="${index}" data-field="description" placeholder="Descrição do poder..." class="powers-input text-sm bg-slate-700 w-full rounded p-1">${item.description || ''}</textarea></div>
-                    <div><label class="text-xs font-semibold">Falhas (Opcional)</label><textarea data-index="${index}" data-field="flaws" placeholder="Desvantagens do poder..." class="powers-input text-sm bg-slate-700 w-full rounded p-1">${item.flaws || ''}</textarea></div>
-                    <div><label class="text-xs font-semibold">Extras (Opcional)</label><textarea data-index="${index}" data-field="extras" placeholder="Vantagens do poder..." class="powers-input text-sm bg-slate-700 w-full rounded p-1">${item.extras || ''}</textarea></div>
-                </div>
-            </div>`);
+                </div>`;
+            }
+        });
 
         renderCharacterTabs();
     };
@@ -465,18 +474,163 @@
 
     const addItem = (key) => {
         const char = state.characters[state.activeIndex];
-        let newItem = {};
         if (key === 'stigmas') {
-            newItem = { name: '', description: '' };
-        } else if (key === 'powers') {
-            newItem = { name: '', action: 'Ação', cost: 0, ppCost: 0, description: '', flaws: '', extras: '' };
-        }
-        
-        if (Object.keys(newItem).length > 0) {
+            const newItem = { name: '', description: '' };
             char[key].push(newItem);
             saveState();
             renderSheet();
+        } else if (key === 'powers') {
+            openPowerSelectionModal();
         }
+    };
+
+    const openModal = (modalId) => {
+        document.getElementById(modalId).classList.remove('hidden');
+        document.getElementById(modalId).classList.add('flex');
+        if (modalId === 'power-config-modal') {
+            document.body.setAttribute('data-config-modal-opened', 'true');
+        }
+    };
+
+    const closeModal = (modalId) => {
+        document.getElementById(modalId).classList.add('hidden');
+        document.getElementById(modalId).classList.remove('flex');
+        if (modalId === 'power-config-modal') {
+            document.body.removeAttribute('data-config-modal-opened');
+        }
+    };
+
+    const openPowerSelectionModal = () => {
+        const powerListContainer = document.getElementById('power-list');
+        const availablePowers = { afligir }; // Assuming 'afligir' is globally available
+
+        powerListContainer.innerHTML = Object.keys(availablePowers).map(key => {
+            const power = availablePowers[key];
+            return `<button onclick="selectPower('${key}')" class="w-full text-left bg-slate-700 hover:bg-slate-600 p-3 rounded-lg transition-colors">
+                        <h3 class="font-bold text-lg text-amber-400">${power.nome}</h3>
+                        <p class="text-sm text-slate-400">${power.descricao.substring(0, 100)}...</p>
+                    </button>`;
+        }).join('');
+
+        openModal('power-selection-modal');
+    };
+
+    const selectPower = (powerKey) => {
+        closeModal('power-selection-modal');
+        openPowerConfigModal(powerKey);
+    };
+
+    const openPowerConfigModal = (powerKey) => {
+        const powerData = window[powerKey];
+        const configContainer = document.getElementById('power-config-content');
+
+        const conditionsHtml = powerData.condicoes.map(cond => `
+            <label class="flex items-center gap-3 p-2 rounded-md bg-slate-700 hover:bg-slate-600 cursor-pointer">
+                <input type="checkbox" name="condition" value="${cond.nome}" data-cost="${cond.custo}" onchange="updatePowerConfigCost('${powerKey}')">
+                <div>
+                    <span class="font-semibold">${cond.nome} (${cond.nivel})</span>
+                    <span class="text-amber-400 font-mono text-sm ml-2">[+${cond.custo} PP]</span>
+                    <p class="text-xs text-slate-400">${cond.descricao}</p>
+                </div>
+            </label>
+        `).join('');
+
+        const modifiersHtml = powerData.modificadores.map(mod => `
+            <label class="flex items-center gap-3 p-2 rounded-md bg-slate-700 hover:bg-slate-600 cursor-pointer">
+                <input type="checkbox" name="modifier" value="${mod.nome}" data-cost="${mod.custo}" onchange="updatePowerConfigCost('${powerKey}')">
+                 <div>
+                    <span class="font-semibold">${mod.nome}</span>
+                    <span class="text-amber-400 font-mono text-sm ml-2">[+${mod.custo} PP]</span>
+                    <p class="text-xs text-slate-400">${mod.descricao}</p>
+                </div>
+            </label>
+        `).join('');
+
+        configContainer.innerHTML = `
+            <h2 class="text-3xl font-bold mb-2 text-amber-300">${powerData.nome}</h2>
+            <p class="text-sm text-slate-400 mb-6">${powerData.descricao}</p>
+
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-xl font-bold mb-3 border-b border-slate-700 pb-2 text-amber-300">Condições</h3>
+                    <div class="space-y-2">${conditionsHtml}</div>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-bold mb-3 border-b border-slate-700 pb-2 text-amber-300">Modificadores</h3>
+                    <div class="space-y-2">${modifiersHtml}</div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-4 border-t border-slate-700 flex justify-between items-center sticky bottom-0 bg-slate-800 py-4">
+                <div class="text-lg">
+                    Custo Total:
+                    <span id="power-total-pp" class="font-bold text-2xl text-amber-400">0 PP</span> /
+                    <span id="power-total-ph" class="font-bold text-2xl text-amber-400">0 PH</span>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="closeModal('power-config-modal')" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">Cancelar</button>
+                    <button onclick="saveConfiguredPower('${powerKey}')" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">Salvar Poder</button>
+                </div>
+            </div>
+        `;
+
+        openModal('power-config-modal');
+    };
+
+    const updatePowerConfigCost = (powerKey) => {
+        const powerData = window[powerKey];
+        let totalPp = 0;
+
+        document.querySelectorAll('#power-config-content input[name="condition"]:checked').forEach(input => {
+            totalPp += parseInt(input.dataset.cost);
+        });
+        document.querySelectorAll('#power-config-content input[name="modifier"]:checked').forEach(input => {
+            totalPp += parseInt(input.dataset.cost);
+        });
+
+        const totalPh = Math.floor(totalPp / 5);
+
+        document.getElementById('power-total-pp').innerText = `${totalPp} PP`;
+        document.getElementById('power-total-ph').innerText = `${totalPh} PH`;
+    };
+
+    const saveConfiguredPower = (powerKey) => {
+        const char = state.characters[state.activeIndex];
+        const powerData = window[powerKey];
+
+        let ppCost = 0;
+        const selectedConditions = [];
+        const selectedModifiers = [];
+
+        document.querySelectorAll('#power-config-content input[name="condition"]:checked').forEach(input => {
+            ppCost += parseInt(input.dataset.cost);
+            selectedConditions.push(input.value);
+        });
+        document.querySelectorAll('#power-config-content input[name="modifier"]:checked').forEach(input => {
+            ppCost += parseInt(input.dataset.cost);
+            selectedModifiers.push(input.value);
+        });
+
+        const cost = Math.floor(ppCost / 5);
+
+        const newPower = {
+            id: powerKey,
+            name: powerData.nome,
+            action: powerData.tipo,
+            cost: cost,
+            ppCost: ppCost,
+            description: powerData.descricao,
+            flaws: '', // Future implementation
+            extras: `Condições: ${selectedConditions.join(', ') || 'Nenhuma'}. Modificadores: ${selectedModifiers.join(', ') || 'Nenhum'}.`,
+            selectedConditions: selectedConditions,
+            selectedModifiers: selectedModifiers,
+        };
+
+        char.powers.push(newPower);
+        saveState();
+        renderSheet();
+        closeModal('power-config-modal');
     };
     
     const deleteItem = (key, index) => {
@@ -499,5 +653,24 @@
     }
 
     </script>
+    <script src="./poderes/afligir.js"></script>
+
+    <!-- Modal de Seleção de Poder -->
+    <div id="power-selection-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+        <div class="bg-slate-800 rounded-xl shadow-lg p-6 w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-4 text-amber-300">Selecione um Poder</h2>
+            <div id="power-list" class="space-y-2">
+                <!-- A lista de poderes será inserida aqui -->
+            </div>
+            <button onclick="closeModal('power-selection-modal')" class="mt-4 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Configuração de Poder -->
+    <div id="power-config-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+        <div id="power-config-content" class="bg-slate-800 rounded-xl shadow-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <!-- O conteúdo de configuração do poder será inserido aqui -->
+        </div>
+    </div>
 </body>
 </html>
